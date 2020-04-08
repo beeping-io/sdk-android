@@ -5,6 +5,7 @@
 package com.beeping.AndroidBeepingCore;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
@@ -217,7 +218,7 @@ public class BeepingCore extends AppCompatActivity {
             System.out.println("BEEPING:SDK: Sin permisos de microfono de inicio");
 
             //Give user option to still opt-in the permissions
-            ActivityCompat.requestPermissions(this,
+            ActivityCompat.requestPermissions((Activity) this.bContext,
                     new String[]{Manifest.permission.RECORD_AUDIO},
                     RECORD_AUDIO_PERMISSIONS);
         }
