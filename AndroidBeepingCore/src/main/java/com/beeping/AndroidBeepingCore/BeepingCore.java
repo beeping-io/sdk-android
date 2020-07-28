@@ -17,7 +17,10 @@ import android.content.Context;
 import android.os.Handler;
 import android.media.AudioManager;
 
-public class BeepingCore extends AppCompatActivity {
+import java.util.Timer;
+import java.util.TimerTask;
+
+public class BeepingCore {
 
     private Context bContext;
     private Thread mThread = null;
@@ -26,6 +29,11 @@ public class BeepingCore extends AppCompatActivity {
     private BeepingCoreJNI mBeepingCoreJNI = new BeepingCoreJNI(this);
     private char[] fullCode = new char[10];
     private boolean mDecoding = false;
+
+    // Timmers
+    Timer timer = null;
+    TimerTask tt = null;
+
     final String TAG = "BEEPING:SDK";
 
     private final int RECORD_AUDIO_PERMISSIONS = 1;
@@ -33,7 +41,7 @@ public class BeepingCore extends AppCompatActivity {
     //Class constructor
     public BeepingCore(Context context) {
 
-        bContext = context;
+        this.bContext = context;
 
         Log.d(TAG, "CORE");
 
@@ -215,10 +223,36 @@ public class BeepingCore extends AppCompatActivity {
         if (ContextCompat.checkSelfPermission(bContext,
                 Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
-            System.out.println("BEEPING:SDK: Sin permisos de microfono de inicio");
+
+            // Se inicializa el timmer hasta que los permisos estén activos
+            this.timer = new Timer();
+            this.tt = new TimerTask() {
+
+                public void run()
+                {
+                    if (ContextCompat.checkSelfPermission(bContext,
+                            Manifest.permission.RECORD_AUDIO)
+                            == PackageManager.PERMISSION_GRANTED) {
+
+                        if(mThread == null && mDecoding == false){
+                            alloc();
+                        }
+
+                        mDecoding = true;
+
+                        mBeepingCoreJNI.startBeepingListen(mBeepingObject);
+
+                        timer.cancel();
+
+                        Log.d(TAG, "LISTENING");
+
+                    }
+                };
+            };
+            this.timer.schedule(tt, 500, 500);
 
             //Give user option to still opt-in the permissions
-            ActivityCompat.requestPermissions((Activity) this.bContext,
+            ActivityCompat.requestPermissions((Activity) bContext ,
                     new String[]{Manifest.permission.RECORD_AUDIO},
                     RECORD_AUDIO_PERMISSIONS);
         }
@@ -236,35 +270,6 @@ public class BeepingCore extends AppCompatActivity {
         }
     }
 
-    //Mic callback
-    public void onRequestPermissionsResult(int requestCode,
-                                           String permissions[], int[] grantResults) {
-        switch (requestCode) {
-            case RECORD_AUDIO_PERMISSIONS: {
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // permission was granted, yay!
-                    Log.d(TAG, "MICROPHONE PERMISSIONS ACCEPTED");
-
-                    if(mThread == null && mDecoding == false){
-                        alloc();
-                    }
-
-                    mDecoding = true;
-
-                    mBeepingCoreJNI.startBeepingListen(mBeepingObject);
-
-                    Log.d(TAG, "LISTENING");
-
-                } else {
-                    // permission denied, boo! Disable the
-                    // functionality that depends on this permission.
-                    Log.d(TAG, "MICROPHONE PERMISSIONS CANCELED");
-                }
-                return;
-            }
-        }
-    }
     //User callback
     protected void BeepingCallback(int value) {
 
